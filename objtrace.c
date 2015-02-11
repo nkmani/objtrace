@@ -52,7 +52,7 @@ PHP_MINIT_FUNCTION(objtrace) {
 
 	char fname[1024];
 	sprintf(fname, "%s/%s", INI_STR("objtrace.trace_output_dir"), INI_STR("objtrace.trace_output_name"));
-	OBJTRACE_G(log) = fopen(fname, "w");
+	OG(log) = fopen(fname, "w");
 
     return SUCCESS;
 }
