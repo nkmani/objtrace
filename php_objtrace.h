@@ -6,7 +6,11 @@
 #endif
 
 ZEND_BEGIN_MODULE_GLOBALS(objtrace)
-long counter;
+int mode;
+int enabled;
+char *trace_output_dir;
+char *trace_output_name;
+FILE *log;
 ZEND_END_MODULE_GLOBALS(objtrace)
 
 #ifdef ZTS

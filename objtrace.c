@@ -8,8 +8,8 @@
 ZEND_DECLARE_MODULE_GLOBALS(objtrace)
 
 static function_entry objtrace_functions[] = {
-    PHP_FE(objtrace, NULL)
-    {NULL, NULL, NULL}
+    PHP_FE(objtrace, NULL) {
+        NULL, NULL, NULL}
 };
 
 zend_module_entry objtrace_module_entry = {
@@ -29,32 +29,43 @@ zend_module_entry objtrace_module_entry = {
     STANDARD_MODULE_PROPERTIES
 };
 
+#ifdef P_tmpdir
+# define OBJTRACE_TEMP_DIR P_tmpdir
+#else
+# define OBJTRACE_TEMP_DIR "/tmp"
+#endif
+
 PHP_INI_BEGIN()
+PHP_INI_ENTRY("objtrace.enabled", "1", PHP_INI_ALL, NULL)
 PHP_INI_ENTRY("objtrace.mode", "1", PHP_INI_ALL, NULL)
+PHP_INI_ENTRY("objtrace.trace_output_dir", OBJTRACE_TEMP_DIR, PHP_INI_ALL, NULL)
+PHP_INI_ENTRY("objtrace.trace_output_name", "objtrace.ot", PHP_INI_ALL, NULL)
 PHP_INI_END()
 
-static void php_objtrace_init_globals(zend_objtrace_globals *objtrace_globals)
-{
-	objtrace_globals->counter = 0;
+static void php_objtrace_init_globals(zend_objtrace_globals *og) {
+    og->log = NULL;
 }
 
-PHP_MINIT_FUNCTION(objtrace)
-{
-	ZEND_INIT_MODULE_GLOBALS(objtrace, php_objtrace_init_globals, NULL);
-	REGISTER_INI_ENTRIES();
-	return SUCCESS;
+PHP_MINIT_FUNCTION(objtrace) {
+    ZEND_INIT_MODULE_GLOBALS(objtrace, php_objtrace_init_globals, NULL);
+    REGISTER_INI_ENTRIES();
+
+	char fname[1024];
+	sprintf(fname, "%s/%s", INI_STR("objtrace.trace_output_dir"), INI_STR("objtrace.trace_output_name"));
+	OBJTRACE_G(log) = fopen(fname, "w");
+
+    return SUCCESS;
 }
 
-PHP_MSHUTDOWN_FUNCTION(objtrace)
-{
-	UNREGISTER_INI_ENTRIES();
-	return SUCCESS;
+PHP_MSHUTDOWN_FUNCTION(objtrace) {
+    UNREGISTER_INI_ENTRIES();
+
+    fclose(OBJTRACE_G(log));
+    return SUCCESS;
 }
 
-PHP_RINIT_FUNCTION(objtrace)
-{
-	OBJTRACE_G(counter) = 0;
-	return SUCCESS;
+PHP_RINIT_FUNCTION(objtrace) {
+    return SUCCESS;
 }
 
 #ifdef COMPILE_DL_OBJTRACE
@@ -62,7 +73,7 @@ ZEND_GET_MODULE(objtrace)
 #endif
 
 static void objtrace_debug_dump(zval *o) {
-	switch (Z_TYPE_P(o)) {
+    switch (Z_TYPE_P(o)) {
         case IS_NULL:
             php_printf("NULL\n");
             break;
@@ -94,21 +105,17 @@ static void objtrace_debug_dump(zval *o) {
     }
 }
 
-PHP_FUNCTION(objtrace)
-{
-	long mode = INI_INT("objtrace.mode");
+PHP_FUNCTION(objtrace) {
+    long mode = INI_INT("objtrace.mode");
 
-	OBJTRACE_G(counter)++;
-
-	zval *o;
-
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &o) == FAILURE) {
-		RETURN_NULL();
-	}
-
-	objtrace_debug_dump(o);
-
-	char *s = emalloc(128);
-	sprintf(s, "Object Tracing -- mode:%ld counter:%ld", mode, OBJTRACE_G(counter));
-	RETURN_STRING(s, 0);
+    RETURN_INT(SUCCESS);
 }
+
+/*
+ * Local Variables:
+ * c-basic-offset: 4
+ * tab-width: 4
+ * End:
+ * vim600: fdm=marker
+ * vim: noet sw=4 ts=4
+ */
